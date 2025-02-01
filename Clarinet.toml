@@ -4,6 +4,10 @@ authors = []
 description = ""
 telemetry = false
 requirements = []
+[contracts.collaboration]
+path = "contracts/collaboration.clar"
+depends_on = []
+
 [contracts.moodboard]
 path = "contracts/moodboard.clar"
 depends_on = []
