@@ -5,6 +5,7 @@
 (define-constant err-owner-only (err u100))
 (define-constant err-not-found (err u101))
 (define-constant err-unauthorized (err u102))
+(define-constant err-invalid-position (err u103))
 
 ;; Define NFT
 (define-non-fungible-token moodboard uint)
@@ -50,6 +51,11 @@
   )
 )
 
+;; Validate position
+(define-private (is-valid-position (pos-x uint) (pos-y uint))
+  (and (< pos-x u10000) (< pos-y u10000))
+)
+
 ;; Add item to moodboard
 (define-public (add-item (token-id uint) (url (string-utf8 200)) (pos-x uint) (pos-y uint))
   (let
@@ -63,9 +69,20 @@
       })
     )
     (asserts! (is-authorized token-id) (err err-unauthorized))
+    (asserts! (is-valid-position pos-x pos-y) (err err-invalid-position))
     (map-set moodboards token-id (merge moodboard {
       items: (append (get items moodboard) new-item)
     }))
+    (ok true)
+  )
+)
+
+;; Update item in moodboard
+(define-public (update-item (token-id uint) (item-id uint) (pos-x uint) (pos-y uint))
+  (let
+    ((moodboard (unwrap! (map-get? moodboards token-id) (err err-not-found))))
+    (asserts! (is-authorized token-id) (err err-unauthorized))
+    (asserts! (is-valid-position pos-x pos-y) (err err-invalid-position))
     (ok true)
   )
 )
@@ -77,6 +94,11 @@
     (asserts! (is-authorized token-id) (err err-unauthorized))
     (ok true)
   )
+)
+
+;; Get moodboard owner
+(define-read-only (get-owner (token-id uint))
+  (ok (nft-get-owner? moodboard token-id))
 )
 
 ;; Helper functions
