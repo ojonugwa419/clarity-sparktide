@@ -6,6 +6,7 @@
 (define-constant err-not-found (err u101))
 (define-constant err-unauthorized (err u102))
 (define-constant err-invalid-position (err u103))
+(define-constant err-item-not-found (err u104))
 
 ;; Define NFT
 (define-non-fungible-token moodboard uint)
@@ -80,19 +81,42 @@
 ;; Update item in moodboard
 (define-public (update-item (token-id uint) (item-id uint) (pos-x uint) (pos-y uint))
   (let
-    ((moodboard (unwrap! (map-get? moodboards token-id) (err err-not-found))))
+    (
+      (moodboard (unwrap! (map-get? moodboards token-id) (err err-not-found)))
+      (items (get items moodboard))
+    )
     (asserts! (is-authorized token-id) (err err-unauthorized))
     (asserts! (is-valid-position pos-x pos-y) (err err-invalid-position))
-    (ok true)
+    (asserts! (< item-id (len items)) (err err-item-not-found))
+    (let
+      (
+        (updated-items (map-set-item items item-id (merge (unwrap! (element-at items item-id) (err err-item-not-found)) {
+          position-x: pos-x,
+          position-y: pos-y
+        })))
+      )
+      (map-set moodboards token-id (merge moodboard { items: updated-items }))
+      (ok true)
+    )
   )
 )
 
 ;; Remove item from moodboard
 (define-public (remove-item (token-id uint) (item-id uint))
   (let
-    ((moodboard (unwrap! (map-get? moodboards token-id) (err err-not-found))))
+    (
+      (moodboard (unwrap! (map-get? moodboards token-id) (err err-not-found)))
+      (items (get items moodboard))
+    )
     (asserts! (is-authorized token-id) (err err-unauthorized))
-    (ok true)
+    (asserts! (< item-id (len items)) (err err-item-not-found))
+    (let
+      (
+        (filtered-items (filter items item-id))
+      )
+      (map-set moodboards token-id (merge moodboard { items: filtered-items }))
+      (ok true)
+    )
   )
 )
 
@@ -110,4 +134,8 @@
       (contract-call? .collaboration is-collaborator token-id tx-sender)
     )
   )
+)
+
+(define-private (filter items item-id)
+  (filter not items (lambda (item) (is-eq (get id item) item-id)))
 )
